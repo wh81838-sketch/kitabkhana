@@ -86,10 +86,25 @@ export async function getRecentlyAdded(limit = 8): Promise<BookCardData[]> {
 
 /** Single book by slug */
 export async function getBookBySlug(slug: string): Promise<BookCardData | null> {
-  const book = await prisma.book.findUnique({
-    where: { slug },
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(slug);
+    } catch {
+      return slug;
+    }
+  })();
+
+  let book = await prisma.book.findUnique({
+    where: { slug: decoded },
     include: bookInclude,
   });
+  // Try raw slug if decode differed
+  if (!book && decoded !== slug) {
+    book = await prisma.book.findUnique({
+      where: { slug },
+      include: bookInclude,
+    });
+  }
   if (!book || book.status !== "published") return null;
   return toBookCard(book);
 }

@@ -29,14 +29,16 @@ function isSafeUrl(urlStr: string): boolean {
 }
 
 function slugify(text: string): string {
-  return text
+  const hash = createHash("md5").update(text + Date.now()).digest("hex").slice(0, 8);
+  const ascii = text
     .trim()
     .toLowerCase()
-    .replace(/[\s_]+/g, "-")
-    .replace(/[^\w\u0600-\u06FF-]+/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 80) || `book-${Date.now()}`;
+    .slice(0, 40);
+  return ascii ? `${ascii}-${hash}` : `book-${hash}`;
 }
 
 export type ExtractedMeta = {

@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props) {
   if (!book) return { title: "کتاب نہیں ملی" };
   return {
     title: book.title,
-    description: book.description.slice(0, 160),
+    description: (book.description || book.title).slice(0, 160),
   };
 }
 

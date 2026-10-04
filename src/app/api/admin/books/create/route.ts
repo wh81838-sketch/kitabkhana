@@ -17,17 +17,34 @@ const schema = z.object({
   featured: z.boolean().default(false),
 });
 
-function slugify(text: string) {
-  return (
-    text
-      .trim()
-      .toLowerCase()
-      .replace(/[\s_]+/g, "-")
-      .replace(/[^\w\u0600-\u06FF-]+/g, "")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 80) || `book-${Date.now()}`
-  );
+/** Safe ASCII slug — Urdu-only titles used to break /book/[slug] URLs */
+function makeBookSlug(title: string): string {
+  const hash = createHash("md5")
+    .update(title + "-" + Date.now() + "-" + Math.random())
+    .digest("hex")
+    .slice(0, 10);
+  const ascii = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+  return ascii ? `${ascii}-${hash}` : `book-${hash}`;
+}
+
+function makeAuthorSlug(name: string): string {
+  const hash = createHash("md5").update(name).digest("hex").slice(0, 6);
+  const ascii = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+  return ascii ? `${ascii}-${hash}` : `author-${hash}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -44,21 +61,28 @@ export async function POST(req: NextRequest) {
     const d = parsed.data;
     let authorId: string | undefined;
 
-    if (d.authorName) {
-      const authorSlug = slugify(d.authorName);
-      const author = await prisma.author.upsert({
-        where: { slug: authorSlug },
-        update: {},
-        create: { name: d.authorName, slug: authorSlug },
+    if (d.authorName?.trim()) {
+      const authorSlug = makeAuthorSlug(d.authorName.trim());
+      // Prefer match by name if slug collision
+      const existing = await prisma.author.findFirst({
+        where: { name: d.authorName.trim() },
       });
-      authorId = author.id;
+      if (existing) {
+        authorId = existing.id;
+      } else {
+        const author = await prisma.author.create({
+          data: { name: d.authorName.trim(), slug: authorSlug },
+        });
+        authorId = author.id;
+      }
     }
 
-    const base = slugify(d.title);
-    const slug =
-      base +
-      "-" +
-      createHash("md5").update(d.title + Date.now()).digest("hex").slice(0, 6);
+    let slug = makeBookSlug(d.title);
+    // Ensure unique
+    const clash = await prisma.book.findUnique({ where: { slug } });
+    if (clash) {
+      slug = `book-${createHash("md5").update(slug + Date.now()).digest("hex").slice(0, 12)}`;
+    }
 
     const book = await prisma.book.create({
       data: {

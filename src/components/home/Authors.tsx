@@ -7,6 +7,7 @@ type Props = {
 };
 
 export function Authors({ authors }: Props) {
+  if (!authors.length) return null;
   return (
     <section className="py-8">
       <SectionHeader title="مصنفین" href="/authors" linkText="تمام مصنفین" />

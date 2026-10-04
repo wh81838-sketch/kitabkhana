@@ -1,6 +1,5 @@
 import { LibraryClient } from "@/components/books/LibraryClient";
 import { getPublishedBooks, getCategories } from "@/lib/books";
-import { demoBooks, categories as demoCategories } from "@/data/demo-books";
 import type { BookCardData, CategoryData } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -14,11 +13,11 @@ export default async function LibraryPage() {
       getPublishedBooks(),
       getCategories(),
     ]);
-    books = dbBooks.length > 0 ? dbBooks : (demoBooks as unknown as BookCardData[]);
-    categories = dbCats.length > 0 ? dbCats : (demoCategories as unknown as CategoryData[]);
-  } catch {
-    books = demoBooks as unknown as BookCardData[];
-    categories = demoCategories as unknown as CategoryData[];
+    // Real DB only — empty admin = empty library
+    books = dbBooks;
+    categories = dbCats;
+  } catch (e) {
+    console.error("Library data error:", e);
   }
 
   return (

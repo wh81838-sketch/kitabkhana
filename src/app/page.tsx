@@ -13,17 +13,17 @@ import {
   getSettings,
   getPublishedBooks,
 } from "@/lib/books";
-import { demoBooks, categories as demoCategories, authors as demoAuthors, personalGreeting as demoGreeting } from "@/data/demo-books";
-import type { BookCardData } from "@/lib/types";
+import type { BookCardData, CategoryData, AuthorData } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   let featured: BookCardData[] = [];
   let recentlyAdded: BookCardData[] = [];
-  let categories = demoCategories;
-  let authors = demoAuthors;
-  let greeting = demoGreeting;
+  let categories: CategoryData[] = [];
+  let authors: AuthorData[] = [];
+  let greeting =
+    "تمہاری پسند کی کتابوں کے نام، ایک اپنی سی دنیا۔";
   let continueReading: BookCardData[] = [];
 
   try {
@@ -36,35 +36,15 @@ export default async function HomePage() {
       getPublishedBooks(),
     ]);
 
-    if (feat.length > 0 || all.length > 0) {
-      featured = feat.length > 0 ? feat : all.filter((b) => b.featured).slice(0, 8);
-      recentlyAdded = recent.length > 0 ? recent : all.slice(0, 5);
-      // Demo progress for continue-reading until real user progress exists
-      continueReading = all
-        .filter((b) => b.featured)
-        .slice(0, 3)
-        .map((b, i) => ({ ...b, readingProgress: [63, 12, 45][i] ?? 20 }));
-    } else {
-      // DB empty — fall back to demo data
-      featured = demoBooks.filter((b) => b.featured) as unknown as BookCardData[];
-      recentlyAdded = [...demoBooks]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 5) as unknown as BookCardData[];
-      continueReading = demoBooks
-        .filter((b) => b.readingProgress && b.readingProgress > 0) as unknown as BookCardData[];
-    }
-
-    if (cats.length > 0) categories = cats as typeof demoCategories;
-    if (auths.length > 0) authors = auths as typeof demoAuthors;
+    // Only real DB data — no demo fallback when empty
+    featured = feat.length > 0 ? feat : all.filter((b) => b.featured).slice(0, 8);
+    recentlyAdded = recent.length > 0 ? recent : all.slice(0, 5);
+    continueReading = []; // real progress later; hide section when empty
+    categories = cats;
+    authors = auths;
     if (settings.personal_greeting) greeting = settings.personal_greeting;
-  } catch {
-    // Prisma not available yet — pure demo mode
-    featured = demoBooks.filter((b) => b.featured) as unknown as BookCardData[];
-    recentlyAdded = [...demoBooks]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 5) as unknown as BookCardData[];
-    continueReading = demoBooks
-      .filter((b) => b.readingProgress && b.readingProgress > 0) as unknown as BookCardData[];
+  } catch (e) {
+    console.error("Home data error:", e);
   }
 
   return (

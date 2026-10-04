@@ -7,6 +7,7 @@ type Props = {
 };
 
 export function Categories({ categories }: Props) {
+  if (!categories.length) return null;
   return (
     <section className="py-8">
       <SectionHeader title="مشہور زمرے" href="/library" linkText="تمام زمرے" />

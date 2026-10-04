@@ -212,3 +212,29 @@ export async function getSettings(): Promise<Record<string, string>> {
   const rows = await prisma.setting.findMany();
   return Object.fromEntries(rows.map((r) => [r.key, r.value]));
 }
+
+/** Single author by slug */
+export async function getAuthorBySlug(slug: string): Promise<AuthorData | null> {
+  const a = await prisma.author.findUnique({
+    where: { slug },
+    include: { _count: { select: { books: true } } },
+  });
+  if (!a) return null;
+  return {
+    id: a.id,
+    name: a.name,
+    slug: a.slug,
+    biography: a.biography,
+    bookCount: a._count.books,
+  };
+}
+
+/** Published books by author slug */
+export async function getBooksByAuthorSlug(slug: string): Promise<BookCardData[]> {
+  const books = await prisma.book.findMany({
+    where: { status: "published", author: { slug } },
+    include: bookInclude,
+    orderBy: { title: "asc" },
+  });
+  return books.map((b) => toBookCard(b));
+}
